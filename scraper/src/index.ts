@@ -1,6 +1,7 @@
 import "./env.js"; // must be first: populates process.env before db.js evaluates
 import { scrapeAllItLots } from "./scrape.js";
 import { isConfigured, startScrapeRun, finishScrapeRun, upsertLots } from "./db.js";
+import { isTelegramConfigured, sendNewLotAlerts } from "./notify.js";
 
 /**
  * Scrapes open IT lots, prints a summary, and (when Supabase is configured)
@@ -48,8 +49,18 @@ async function main() {
   try {
     runId = await startScrapeRun();
     const { newLots, total } = await upsertLots(lots);
-    await finishScrapeRun(runId, { lotsFound: total, newLots });
-    console.log(`Saved to Supabase: ${total} lots (${newLots} new, ${total - newLots} updated).`);
+    await finishScrapeRun(runId, { lotsFound: total, newLots: newLots.length });
+    console.log(`Saved to Supabase: ${total} lots (${newLots.length} new, ${total - newLots.length} updated).`);
+
+    // Alert on new lots (non-fatal — persistence already succeeded).
+    if (isTelegramConfigured) {
+      try {
+        const alerted = await sendNewLotAlerts(newLots);
+        console.log(alerted > 0 ? `Telegram: alerted ${alerted} new lot(s).` : "Telegram: no new lots above threshold.");
+      } catch (err) {
+        console.error("Telegram alert failed:", (err as Error).message);
+      }
+    }
   } catch (err) {
     const message = (err as Error).message;
     console.error("Persistence failed:", message);

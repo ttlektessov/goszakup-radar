@@ -75,11 +75,12 @@ export async function finishScrapeRun(
 }
 
 /**
- * Upserts lots by lot_number and reports how many were new vs. already seen.
- * Counts new rows by checking which lot_numbers already existed before writing.
+ * Upserts lots by lot_number and returns the ones that were new (not already
+ * in the DB), so the caller can alert on them. Detects new rows by checking
+ * which lot_numbers already existed before writing.
  */
-export async function upsertLots(lots: Lot[]): Promise<{ newLots: number; total: number }> {
-  if (lots.length === 0) return { newLots: 0, total: 0 };
+export async function upsertLots(lots: Lot[]): Promise<{ newLots: Lot[]; total: number }> {
+  if (lots.length === 0) return { newLots: [], total: 0 };
 
   const numbers = lots.map((l) => l.lotNumber);
   const { data: existing, error: selErr } = await db()
@@ -88,7 +89,7 @@ export async function upsertLots(lots: Lot[]): Promise<{ newLots: number; total:
     .in("lot_number", numbers);
   if (selErr) throw selErr;
   const existingSet = new Set((existing ?? []).map((r) => r.lot_number as string));
-  const newLots = lots.filter((l) => !existingSet.has(l.lotNumber)).length;
+  const newLots = lots.filter((l) => !existingSet.has(l.lotNumber));
 
   // Upsert in chunks to stay well under request-size limits.
   const CHUNK = 500;

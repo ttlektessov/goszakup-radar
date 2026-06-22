@@ -81,6 +81,12 @@ export const RELEVANCE_TERMS: Array<{ pattern: RegExp; weight: number }> = [
   { pattern: /it[- ]|айти|ит[- ]услуг/i, weight: 2 },
 ];
 
+/** Only new lots scoring at least this much trigger a Telegram alert. */
+export const ALERT_MIN_SCORE = 4;
+
+/** Max lots listed in one alert message; the rest are summarized as "+N more". */
+export const ALERT_MAX_ITEMS = 10;
+
 export const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36";

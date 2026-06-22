@@ -6,6 +6,8 @@
   "description": "Scrapes goszakup.gov.kz for open IT-related procurement lots.",
   "scripts": {
     "scrape": "tsx src/index.ts",
+    "telegram:chatid": "tsx src/telegram-chatid.ts",
+    "telegram:test": "tsx src/telegram-test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

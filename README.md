@@ -37,7 +37,7 @@ goszakup /search/lots ──parse HTML──► filter IT ──score──► u
 - [x] **Phase 3** — React dashboard (auth, filter, sort, save/dismiss, "new" badges)
 - [x] **Phase 4** — GitHub Actions scheduled scrape
 - [~] **Phase 5** — Deploy dashboard to Vercel
-- [ ] **Phase 6** *(optional)* — Telegram/email alerts for high-relevance lots
+- [x] **Phase 6** — Telegram alerts for new high-relevance lots
 
 ## Dashboard — local usage
 
@@ -75,6 +75,21 @@ Import the repo at [vercel.com](https://vercel.com) and set:
 After the first deploy, add the Vercel URL to Supabase → Authentication → URL
 Configuration → **Site URL**. The `rewrites` rule serves `index.html` for all
 routes (SPA fallback).
+
+## Telegram alerts (optional)
+
+After each scrape, new lots scoring ≥ `ALERT_MIN_SCORE` (see
+[`scraper/src/config.ts`](scraper/src/config.ts)) are sent to a Telegram chat as
+one summary message. Disabled unless both env vars are set.
+
+Setup:
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) → copy the **token**.
+2. Put it in `scraper/.env` as `TELEGRAM_BOT_TOKEN`, open your bot, send it `/start`.
+3. `cd scraper && npm run telegram:chatid` → copy the printed id into
+   `TELEGRAM_CHAT_ID`.
+4. `npm run telegram:test` → confirms a sample alert arrives.
+5. Add both as **GitHub repository secrets** so the scheduled scrape can alert too.
 
 ## Security model
 
