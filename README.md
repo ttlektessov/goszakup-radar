@@ -3,12 +3,35 @@
 A personal dashboard that screens Kazakhstan government procurement
 ([goszakup.gov.kz](https://www.goszakup.gov.kz)) for **open IT-related lots** you can bid on.
 
+**Live demo:** [goszakup-radar.vercel.app](https://goszakup-radar.vercel.app) — private by
+design (single account, sign-in only); see [screenshots](#screenshots).
+
+**Stack:** React · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS) · Node + Cheerio
+scraper · GitHub Actions · Vercel
+
 ## Why
 
 The official portal has thousands of active lots across every category. This tool
 filters them down to IT work (software, web, information systems, support,
 hardware), ranks by relevance, tracks what's new, and lets you save or dismiss
 lots — so screening takes minutes instead of hours.
+
+## Features
+
+- Scrapes goszakup's lot search for **open IT lots** and ranks each by a relevance score
+- **Region** filter/sort (derived from the customer org), **min-score** filter, full-text search
+- Hides **closed** lots (no longer in the latest scrape) and flags brand-**new** ones
+- Per-user **save / dismiss / notes**, protected by Row-Level Security
+- **Scheduled** scrape every 8 h via GitHub Actions, with `first_seen`/`last_seen` dedup
+- Optional **Telegram alerts** for new high-relevance lots
+
+## Screenshots
+
+<!-- The live demo is login-gated, so add a screenshot for reviewers:
+     save a dashboard capture as docs/dashboard.png and uncomment the line below. -->
+<!-- ![Dashboard](docs/dashboard.png) -->
+
+_Coming soon — drop a dashboard screenshot in `docs/` and link it here._
 
 ## Architecture
 
@@ -36,7 +59,7 @@ goszakup /search/lots ──parse HTML──► filter IT ──score──► u
 - [x] **Phase 2** — Persist to Supabase with dedup (`first_seen` / `last_seen`)
 - [x] **Phase 3** — React dashboard (auth, filter, sort, save/dismiss, "new" badges)
 - [x] **Phase 4** — GitHub Actions scheduled scrape
-- [~] **Phase 5** — Deploy dashboard to Vercel
+- [x] **Phase 5** — Deploy dashboard to Vercel
 - [x] **Phase 6** — Telegram alerts for new high-relevance lots
 
 ## Dashboard — local usage
@@ -48,9 +71,9 @@ cp .env.example .env.local   # add VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
 
-Sign up once with email + password, then sign in. Lots are read from Supabase
-(RLS limits access to authenticated users); per-user save/dismiss/notes live in
-`user_lot_state`.
+The UI is **sign-in only**; create your user in Supabase (Authentication → Users), or
+temporarily enable sign-ups. Lots are read from Supabase (RLS limits access to
+authenticated users); per-user save/dismiss/notes live in `user_lot_state`.
 
 ## Automation (GitHub Actions)
 
