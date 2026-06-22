@@ -43,11 +43,15 @@ export async function setLotState(
   if (error) throw error;
 }
 
-/** Latest scrape run, for the freshness indicator. */
-export async function fetchLatestRun(): Promise<{ finished_at: string | null; lots_found: number | null } | null> {
+/** Latest scrape run, for the freshness indicator and stale-lot cutoff. */
+export async function fetchLatestRun(): Promise<{
+  started_at: string;
+  finished_at: string | null;
+  lots_found: number | null;
+} | null> {
   const { data, error } = await supabase
     .from("scrape_runs")
-    .select("finished_at, lots_found")
+    .select("started_at, finished_at, lots_found")
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();

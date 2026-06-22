@@ -3,22 +3,28 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { fetchLots, fetchLatestRun, setLotState } from "../lib/lots";
 import { formatAmount, formatDate, isNew } from "../lib/format";
+import { extractRegion } from "../lib/region";
 import type { LotWithState } from "../types";
 
 type View = "active" | "saved" | "all";
-type SortKey = "relevance_score" | "amount" | "first_seen";
+type SortKey = "relevance_score" | "amount" | "first_seen" | "region";
+
+/** A lot plus its derived region. */
+type Row = LotWithState & { region: string | null; closed: boolean };
 
 export function Dashboard({ session }: { session: Session }) {
   const userId = session.user.id;
   const [lots, setLots] = useState<LotWithState[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastRun, setLastRun] = useState<{ finished_at: string | null; lots_found: number | null } | null>(null);
+  const [lastRun, setLastRun] = useState<{ started_at: string; finished_at: string | null; lots_found: number | null } | null>(null);
 
   const [search, setSearch] = useState("");
   const [minScore, setMinScore] = useState(0);
   const [view, setView] = useState<View>("active");
   const [sortKey, setSortKey] = useState<SortKey>("relevance_score");
+  const [region, setRegion] = useState("all");
+  const [hideClosed, setHideClosed] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -38,37 +44,58 @@ export function Dashboard({ session }: { session: Session }) {
     const current = lots.find((l) => l.lot_number === lotNumber);
     if (!current) return;
     const next = !current[field];
-    // optimistic update
     setLots((prev) => prev.map((l) => (l.lot_number === lotNumber ? { ...l, [field]: next } : l)));
     try {
       await setLotState(userId, lotNumber, { [field]: next });
     } catch (err) {
-      // revert on failure
       setLots((prev) => prev.map((l) => (l.lot_number === lotNumber ? { ...l, [field]: current[field] } : l)));
       setError((err as Error).message);
     }
   }
 
+  // A lot is "closed" if it wasn't refreshed in the most recent scrape.
+  const cutoff = lastRun ? Date.parse(lastRun.started_at) : null;
+
+  // Derive region + closed flag once per lot.
+  const rows: Row[] = useMemo(
+    () =>
+      lots.map((l) => ({
+        ...l,
+        region: extractRegion(l.customer, l.announce_name),
+        closed: cutoff != null && Date.parse(l.last_seen) < cutoff,
+      })),
+    [lots, cutoff],
+  );
+
+  const regionOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.region) set.add(r.region);
+    return [...set].sort((a, b) => a.localeCompare(b, "ru"));
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const rows = lots.filter((l) => {
+    const out = rows.filter((l) => {
+      if (hideClosed && l.closed) return false;
       if (view === "saved" && !l.saved) return false;
       if (view === "active" && l.dismissed) return false;
       if (l.relevance_score < minScore) return false;
+      if (region !== "all" && l.region !== region) return false;
       if (q) {
         const hay = `${l.lot_name} ${l.announce_name ?? ""} ${l.customer ?? ""} ${l.lot_number}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-    rows.sort((a, b) => {
+    out.sort((a, b) => {
       if (sortKey === "first_seen") return b.first_seen.localeCompare(a.first_seen);
+      if (sortKey === "region") return (a.region ?? "я").localeCompare(b.region ?? "я", "ru");
       const av = a[sortKey] ?? 0;
       const bv = b[sortKey] ?? 0;
       return bv - av;
     });
-    return rows;
-  }, [lots, search, minScore, view, sortKey]);
+    return out;
+  }, [rows, search, minScore, view, sortKey, region, hideClosed]);
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -78,7 +105,7 @@ export function Dashboard({ session }: { session: Session }) {
             <h1 className="text-lg font-semibold text-slate-900">goszakup IT radar</h1>
             <p className="text-xs text-slate-500">
               {lastRun?.finished_at
-                ? `Last updated ${formatDate(lastRun.finished_at)} · ${lots.length} lots`
+                ? `Last updated ${formatDate(lastRun.finished_at)} · ${lots.length} lots tracked`
                 : `${lots.length} lots`}
             </p>
           </div>
@@ -101,7 +128,7 @@ export function Dashboard({ session }: { session: Session }) {
             placeholder="Search lot, customer, number…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+            className="w-64 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
           />
           <div className="inline-flex overflow-hidden rounded-lg border border-slate-300 text-sm">
             {(["active", "saved", "all"] as View[]).map((v) => (
@@ -114,6 +141,21 @@ export function Dashboard({ session }: { session: Session }) {
               </button>
             ))}
           </div>
+          <label className="text-sm text-slate-600">
+            Region{" "}
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="all">All</option>
+              {regionOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="text-sm text-slate-600">
             Min score{" "}
             <select
@@ -138,7 +180,12 @@ export function Dashboard({ session }: { session: Session }) {
               <option value="relevance_score">Relevance</option>
               <option value="amount">Amount</option>
               <option value="first_seen">Newest</option>
+              <option value="region">Region</option>
             </select>
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-slate-600">
+            <input type="checkbox" checked={hideClosed} onChange={(e) => setHideClosed(e.target.checked)} />
+            Hide closed
           </label>
           <span className="ml-auto text-sm text-slate-500">{filtered.length} shown</span>
         </div>
@@ -154,6 +201,7 @@ export function Dashboard({ session }: { session: Session }) {
                   <th className="px-3 py-2">Score</th>
                   <th className="px-3 py-2">Lot</th>
                   <th className="px-3 py-2">Customer</th>
+                  <th className="px-3 py-2">Region</th>
                   <th className="px-3 py-2 text-right">Amount</th>
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2 text-right">Actions</th>
@@ -176,8 +224,11 @@ export function Dashboard({ session }: { session: Session }) {
                         ) : (
                           <span className="font-medium text-slate-900">{l.lot_name}</span>
                         )}
-                        {isNew(l.first_seen) && (
+                        {isNew(l.first_seen) && !l.closed && (
                           <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">NEW</span>
+                        )}
+                        {l.closed && (
+                          <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">CLOSED</span>
                         )}
                       </div>
                       <div className="text-xs text-slate-400">
@@ -185,6 +236,7 @@ export function Dashboard({ session }: { session: Session }) {
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top text-slate-600">{l.customer ?? "—"}</td>
+                    <td className="px-3 py-2 align-top whitespace-nowrap text-slate-600">{l.region ?? "—"}</td>
                     <td className="px-3 py-2 align-top text-right whitespace-nowrap font-medium text-slate-900">
                       {formatAmount(l.amount)}
                     </td>
@@ -209,7 +261,7 @@ export function Dashboard({ session }: { session: Session }) {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-slate-400">
+                    <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
                       No lots match these filters.
                     </td>
                   </tr>
