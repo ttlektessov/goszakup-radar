@@ -1,0 +1,38 @@
+name: scrape
+
+# Runs the scraper on a schedule and writes fresh IT lots to Supabase.
+# Cron is in UTC: every 8 hours → 00:00 / 08:00 / 16:00 UTC
+# (≈ 05:00 / 13:00 / 21:00 Almaty). Also runnable on demand.
+on:
+  schedule:
+    - cron: "0 */8 * * *"
+  workflow_dispatch:
+
+# Never let two scrapes overlap.
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scraper/package-lock.json
+
+      - run: npm ci
+
+      - name: Scrape and persist
+        run: npm run scrape
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
