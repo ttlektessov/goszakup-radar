@@ -36,7 +36,7 @@ goszakup /search/lots ──parse HTML──► filter IT ──score──► u
 - [x] **Phase 2** — Persist to Supabase with dedup (`first_seen` / `last_seen`)
 - [x] **Phase 3** — React dashboard (auth, filter, sort, save/dismiss, "new" badges)
 - [x] **Phase 4** — GitHub Actions scheduled scrape
-- [ ] **Phase 5** — Deploy dashboard to Vercel
+- [~] **Phase 5** — Deploy dashboard to Vercel
 - [ ] **Phase 6** *(optional)* — Telegram/email alerts for high-relevance lots
 
 ## Dashboard — local usage
@@ -62,6 +62,19 @@ under *Settings → Secrets and variables → Actions*:
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 The service-role key stays server-side in GitHub — it's never shipped to the browser.
+
+## Deploy the dashboard (Vercel)
+
+Import the repo at [vercel.com](https://vercel.com) and set:
+
+- **Root Directory:** `web`
+- **Framework Preset:** Vite (auto-detected; pinned in [`web/vercel.json`](web/vercel.json))
+- **Environment Variables:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+  (the **anon** key — never the service-role key)
+
+After the first deploy, add the Vercel URL to Supabase → Authentication → URL
+Configuration → **Site URL**. The `rewrites` rule serves `index.html` for all
+routes (SPA fallback).
 
 ## Security model
 
