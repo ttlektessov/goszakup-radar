@@ -218,6 +218,15 @@ export function Dashboard({ session }: { session: Session }) {
             </table>
           </div>
         )}
+
+        <footer className="mt-6 text-center text-xs text-slate-400">
+          Independent personal project — not affiliated with or endorsed by goszakup.gov.kz.
+          Data sourced from the public procurement portal{" "}
+          <a href="https://www.goszakup.gov.kz" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">
+            goszakup.gov.kz
+          </a>
+          .
+        </footer>
       </main>
     </div>
   );
