@@ -1,3 +1,10 @@
+const GOSZAKUP_BASE = "https://www.goszakup.gov.kz";
+
+/** Link to the announcement page (preferred), falling back to the stored URL. */
+export function announceUrl(announceId: number | null, fallback: string | null): string | null {
+  return announceId != null ? `${GOSZAKUP_BASE}/ru/announce/index/${announceId}` : fallback;
+}
+
 export function formatAmount(amount: number | null): string {
   if (amount == null) return "—";
   return amount.toLocaleString("ru-RU") + " ₸";

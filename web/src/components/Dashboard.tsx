@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { fetchLots, fetchLatestRun, setLotState } from "../lib/lots";
-import { formatAmount, formatDate, isNew } from "../lib/format";
+import { formatAmount, formatDate, isNew, announceUrl } from "../lib/format";
 import { extractRegion } from "../lib/region";
 import type { LotWithState } from "../types";
 
@@ -217,13 +217,16 @@ export function Dashboard({ session }: { session: Session }) {
                     </td>
                     <td className="px-3 py-2 align-top">
                       <div className="flex items-center gap-2">
-                        {l.url ? (
-                          <a href={l.url} target="_blank" rel="noreferrer" className="font-medium text-slate-900 hover:underline">
-                            {l.lot_name}
-                          </a>
-                        ) : (
-                          <span className="font-medium text-slate-900">{l.lot_name}</span>
-                        )}
+                        {(() => {
+                          const href = announceUrl(l.announce_id, l.url);
+                          return href ? (
+                            <a href={href} target="_blank" rel="noreferrer" className="font-medium text-slate-900 hover:underline">
+                              {l.lot_name}
+                            </a>
+                          ) : (
+                            <span className="font-medium text-slate-900">{l.lot_name}</span>
+                          );
+                        })()}
                         {isNew(l.first_seen) && !l.closed && (
                           <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">NEW</span>
                         )}

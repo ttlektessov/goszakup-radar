@@ -58,10 +58,11 @@ export function parseLots(html: string): Lot[] {
     const method = $(tds[5]).text().trim() || null;
     const status = $(tds[6]).text().trim() || null;
 
-    const url = lotHref
-      ? new URL(lotHref, BASE_URL).toString()
-      : announceHref
-        ? new URL(announceHref, BASE_URL).toString()
+    // Link to the announcement page (preferred) rather than the price-offer page.
+    const url = announceHref
+      ? new URL(announceHref, BASE_URL).toString()
+      : lotHref
+        ? new URL(lotHref, BASE_URL).toString()
         : null;
 
     lots.push({
