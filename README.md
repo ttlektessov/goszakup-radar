@@ -27,11 +27,7 @@ lots — so screening takes minutes instead of hours.
 
 ## Screenshots
 
-<!-- The live demo is login-gated, so add a screenshot for reviewers:
-     save a dashboard capture as docs/dashboard.png and uncomment the line below. -->
-<!-- ![Dashboard](docs/dashboard.png) -->
-
-_Coming soon — drop a dashboard screenshot in `docs/` and link it here._
+![Dashboard](docs/dashboard.png)
 
 ## Architecture
 
@@ -53,15 +49,6 @@ goszakup /search/lots ──parse HTML──► filter IT ──score──► u
 - **Frontend** — React reads from Supabase directly; no custom API server needed
   for the read-only dashboard.
 
-## Status
-
-- [x] **Phase 1** — Scraper core: fetch, parse, IT-filter, relevance score, CLI output
-- [x] **Phase 2** — Persist to Supabase with dedup (`first_seen` / `last_seen`)
-- [x] **Phase 3** — React dashboard (auth, filter, sort, save/dismiss, "new" badges)
-- [x] **Phase 4** — GitHub Actions scheduled scrape
-- [x] **Phase 5** — Deploy dashboard to Vercel
-- [x] **Phase 6** — Telegram alerts for new high-relevance lots
-
 ## Dashboard — local usage
 
 ```bash
@@ -71,8 +58,7 @@ cp .env.example .env.local   # add VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
 
-The UI is **sign-in only**; create your user in Supabase (Authentication → Users), or
-temporarily enable sign-ups. Lots are read from Supabase (RLS limits access to
+The UI is **sign-in only**; create your user in Supabase (Authentication → Users). Lots are read from Supabase (RLS limits access to
 authenticated users); per-user save/dismiss/notes live in `user_lot_state`.
 
 ## Automation (GitHub Actions)
